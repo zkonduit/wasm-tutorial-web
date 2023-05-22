@@ -207,15 +207,15 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
     </body>
 </html>
 ```
-1) This script generates a simple HTML frontend with fields to pass in files for our input fields (we'll upload them from our ezkl directory). It also calls the `ezkl_lib.js` folder in our pkg to fetch the exported `prove_wasm`, `verify_wasm`, and `init_panic_hook` functions.
+4) This script generates a simple HTML frontend with fields to pass in files for our input fields (we'll upload them from our ezkl directory). It also calls the `ezkl_lib.js` folder in our pkg to fetch the exported `prove_wasm`, `verify_wasm`, and `init_panic_hook` functions.
 
-2) Finally, run a simple https server such as python3's:
+5) Run a simple https server such as python3's:
 
    ```
    python3 -m http.server
    ```
 
-3) Finally, run the `setup` step in ezkl (WASM support for this coming soon) and upload the files to your `Prove` function. The ordering for `Prove` (from left to right) is:
+6) Finally, run the `setup` step in ezkl (WASM support for this coming soon) and upload the files to your `Prove` function. The ordering for `Prove` (from left to right) is:
 
    * `data`: input data (input.json)
    * `pk`: proving key (pk.key)
