@@ -1,0 +1,108 @@
+<html>
+
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+</head>
+
+<body>
+    <script type="module">
+        import init, { prove_wasm, verify_wasm } from './pkg/ezkl_lib.js';
+
+        async function run() {
+            try {
+                await init();
+
+                function readUploadedFileAsText(inputFileElement) {
+                    return new Promise((resolve, reject) => {
+                        const file = inputFileElement.files[0];
+                        const reader = new FileReader();
+
+                        reader.onload = event => {
+                            const arrayBuffer = event.target.result;
+                            resolve(new Uint8ClampedArray(arrayBuffer));
+                        };
+
+                        reader.onerror = error => {
+                            reject(new Error('File could not be read: ' + error));
+                        };
+
+                        reader.readAsArrayBuffer(file);
+                    });
+                }
+
+                document.getElementById("proveButton").addEventListener("click", async () => {
+                    try {
+                        const data = await readUploadedFileAsText(document.getElementById("data"));
+                        const pk = await readUploadedFileAsText(document.getElementById("pk"));
+                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser"));
+                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser"));
+                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser"));
+
+                        const result = await prove_wasm(data, pk, circuit_ser, circuit_params_ser, params_ser);
+
+                        // Assume result is a Uint8ClampedArray
+                        // Create a blob from the result
+                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        // Create a URL for the blob
+                        const url = URL.createObjectURL(blob);
+                        // Create a temporary anchor element
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = 'result.bin'; // the file name
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click(); // programmatically click the anchor to trigger download
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url); // revoke the URL after using it
+                            document.body.removeChild(a);
+                        }, 0);
+                    } catch (error) {
+                        console.error("An error occurred during proving:", error);
+                    }
+                });
+
+
+                document.getElementById("verifyButton").addEventListener("click", async () => {
+                    try {
+                        const proof_js = await readUploadedFileAsText(document.getElementById("proof_js"));
+                        const vk = await readUploadedFileAsText(document.getElementById("vk"));
+                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_verify"));
+                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_verify"));
+
+                        const result = await verify_wasm(proof_js, vk, circuit_params_ser, params_ser);
+                        document.getElementById("verifyResult").innerText = result ? 'True' : 'False';
+                    } catch (error) {
+                        console.error("An error occurred during verification:", error);
+                    }
+                });
+            } catch (error) {
+                console.error("An error occurred:", error);
+            }
+        }
+
+        run();
+    </script>
+    <div>
+        <h1>Prove</h1>
+        <input id="data" type="file" placeholder="data" />
+        <input id="pk" type="file" placeholder="pk" />
+        <input id="circuit_ser" type="file" placeholder="circuit_ser" />
+        <input id="circuit_params_ser" type="file" placeholder="circuit_params_ser" />
+        <input id="params_ser" type="file" placeholder="params_ser" />
+        <button id="proveButton">Prove</button>
+        <h2>Result:</h2>
+        <div id="proveResult"></div>
+    </div>
+    <div>
+        <h1>Verify</h1>
+        <input id="proof_js" type="file" placeholder="proof_js" />
+        <input id="vk" type="file" placeholder="vk" />
+        <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser" />
+        <input id="params_ser_verify" type="file" placeholder="params_ser" />
+        <button id="verifyButton">Verify</button>
+        <h2>Result:</h2>
+        <div id="verifyResult"></div>
+    </div>
+</body>
+
+</html>
