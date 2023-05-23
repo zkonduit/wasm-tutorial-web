@@ -1,108 +1,132 @@
 <html>
+    <head>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    </head>
+    <body>
+        <script type="module">
+            // Importing the necessary functions from the WASM module
+            import init, { prove_wasm, verify_wasm } from './pkg/ezkl_lib.js';
 
-<head>
-    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
-</head>
+            async function run() {
+                try {
+                    // Initialize the WASM module
+                    await init();
 
-<body>
-    <script type="module">
-        import init, { prove_wasm, verify_wasm } from './pkg/ezkl_lib.js';
+                    // Function to read an uploaded file and return its content as a Uint8ClampedArray
+                    function readUploadedFileAsText(inputFileElement) {
+                        return new Promise((resolve, reject) => {
+                            const file = inputFileElement.files[0];
+                            const reader = new FileReader();
 
-        async function run() {
-            try {
-                await init();
+                            reader.onload = event => {
+                                const arrayBuffer = event.target.result;
+                                resolve(new Uint8ClampedArray(arrayBuffer));
+                            };
 
-                function readUploadedFileAsText(inputFileElement) {
-                    return new Promise((resolve, reject) => {
-                        const file = inputFileElement.files[0];
-                        const reader = new FileReader();
+                            reader.onerror = error => {
+                                reject(new Error('File could not be read: ' + error));
+                            };
 
-                        reader.onload = event => {
-                            const arrayBuffer = event.target.result;
-                            resolve(new Uint8ClampedArray(arrayBuffer));
-                        };
+                            reader.readAsArrayBuffer(file);
+                        });
+                    }
 
-                        reader.onerror = error => {
-                            reject(new Error('File could not be read: ' + error));
-                        };
+                    // Adding an event listener to the proveButton
+                    document.getElementById("proveButton").addEventListener("click", async () => {
+                        try {
+                            // Reading the content of the input files
+                            const data = await readUploadedFileAsText(document.getElementById("data"));
+                            const pk = await readUploadedFileAsText(document.getElementById("pk"));
+                            const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser"));
+                            const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser"));
+                            const params_ser = await readUploadedFileAsText(document.getElementById("params_ser"));
 
-                        reader.readAsArrayBuffer(file);
+                            // Using the WASM function to get a result
+                            const result = await prove_wasm(data, pk, circuit_ser, circuit_params_ser, params_ser);
+
+                            // Creating a blob and a URL for it from the result
+                            const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                            const url = URL.createObjectURL(blob);
+
+                            // Creating a hidden anchor element, adding it to the document,
+                            // clicking it to download the file and then removing the element
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = 'proof.bin';
+                            a.style.display = 'none';
+                            document.body.appendChild(a);
+                            a.click();
+                            setTimeout(() => {
+                                URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                            }, 0);
+                        } catch (error) {
+                            console.error("An error occurred during proving:", error);
+                        }
                     });
+
+                    // Adding an event listener to the verifyButton
+                    document.getElementById("verifyButton").addEventListener("click", async () => {
+                        try {
+                            // Reading the content of the input files
+                            const proof_js = await readUploadedFileAsText(document.getElementById("proof_js"));
+                            const vk = await readUploadedFileAsText(document.getElementById("vk"));
+                            const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_verify"));
+                            const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_verify"));
+
+                            // Using the WASM function to get a result
+                            const result = await verify_wasm(proof_js, vk, circuit_params_ser, params_ser);
+
+                            // Displaying the result
+                            document.getElementById("verifyResult").innerText = result ? 'True' : 'False';
+                        } catch (error) {
+                            console.error("An error occurred during verification:", error);
+                        }
+                    });
+                } catch (error) {
+                    console.error("An error occurred:", error);
                 }
-
-                document.getElementById("proveButton").addEventListener("click", async () => {
-                    try {
-                        const data = await readUploadedFileAsText(document.getElementById("data"));
-                        const pk = await readUploadedFileAsText(document.getElementById("pk"));
-                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser"));
-                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser"));
-                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser"));
-
-                        const result = await prove_wasm(data, pk, circuit_ser, circuit_params_ser, params_ser);
-
-                        // Assume result is a Uint8ClampedArray
-                        // Create a blob from the result
-                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
-                        // Create a URL for the blob
-                        const url = URL.createObjectURL(blob);
-                        // Create a temporary anchor element
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = 'result.bin'; // the file name
-                        a.style.display = 'none';
-                        document.body.appendChild(a);
-                        a.click(); // programmatically click the anchor to trigger download
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url); // revoke the URL after using it
-                            document.body.removeChild(a);
-                        }, 0);
-                    } catch (error) {
-                        console.error("An error occurred during proving:", error);
-                    }
-                });
-
-
-                document.getElementById("verifyButton").addEventListener("click", async () => {
-                    try {
-                        const proof_js = await readUploadedFileAsText(document.getElementById("proof_js"));
-                        const vk = await readUploadedFileAsText(document.getElementById("vk"));
-                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_verify"));
-                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_verify"));
-
-                        const result = await verify_wasm(proof_js, vk, circuit_params_ser, params_ser);
-                        document.getElementById("verifyResult").innerText = result ? 'True' : 'False';
-                    } catch (error) {
-                        console.error("An error occurred during verification:", error);
-                    }
-                });
-            } catch (error) {
-                console.error("An error occurred:", error);
             }
-        }
 
-        run();
-    </script>
-    <div>
-        <h1>Prove</h1>
-        <input id="data" type="file" placeholder="data" />
-        <input id="pk" type="file" placeholder="pk" />
-        <input id="circuit_ser" type="file" placeholder="circuit_ser" />
-        <input id="circuit_params_ser" type="file" placeholder="circuit_params_ser" />
-        <input id="params_ser" type="file" placeholder="params_ser" />
-        <button id="proveButton">Prove</button>
-        <h2>Result:</h2>
-        <div id="proveResult"></div>
-    </div>
-    <div>
-        <h1>Verify</h1>
-        <input id="proof_js" type="file" placeholder="proof_js" />
-        <input id="vk" type="file" placeholder="vk" />
-        <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser" />
-        <input id="params_ser_verify" type="file" placeholder="params_ser" />
-        <button id="verifyButton">Verify</button>
-        <h2>Result:</h2>
-        <div id="verifyResult"></div>
-    </div>
-</body>
-
+            // Running the main function
+            run();
+        </script>
+        <!--HTML forms for the proving and verifying functionality-->
+        <div>
+            <h1>Prove</h1>
+            <!--File inputs to upload the necessary files-->
+            <label for="data">Input Data:</label>
+            <input id="data" type="file" placeholder="data" />
+            <label for="pk">Proving key:</label>
+            <input id="pk" type="file" placeholder="pk" />
+            <label for="circuit_ser">Circuit (.onnx):</label>
+            <input id="circuit_ser" type="file" placeholder="circuit_ser" />
+            <label for="circuit_params_ser">Circuit params:</label>
+            <input id="circuit_params_ser" type="file" placeholder="circuit_params_ser" />
+            <label for="params_ser">KZG params:</label>
+            <input id="params_ser" type="file" placeholder="params_ser" />
+            <!--Button to start the proving process-->
+            <button id="proveButton">Prove</button>
+            <h2>Result:</h2>
+            <!--Placeholder for the proving result-->
+            <div id="proveResult"></div>
+        </div>
+        <div>
+            <h1>Verify</h1>
+            <!--File inputs to upload the necessary files-->
+            <label for="proof_js">Proof (proof.bin):</label>
+            <input id="proof_js" type="file" placeholder="proof_js" />
+            <label for="vk">Verifier key:</label>
+            <input id="vk" type="file" placeholder="vk" />
+            <label for="circuit_params_ser_verify">Circuit params:</label>
+            <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser" />
+            <label for="params_ser_verify">KZG params:</label>
+            <input id="params_ser_verify" type="file" placeholder="params_ser" />
+            <!--Button to start the verification process-->
+            <button id="verifyButton">Verify</button>
+            <h2>Result:</h2>
+            <!--Placeholder for the verification result-->
+            <div id="verifyResult"></div>
+        </div>
+    </body>
 </html>

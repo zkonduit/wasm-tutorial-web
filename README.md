@@ -49,7 +49,7 @@ cargo install wasm-server-runner
 With this, we're finally able to compile our .wasm file! You can do that with this command:
 
 ```bash
-AR=opt/llvm/bin/llvm-ar  CC=opt/llvm/bin/clang wasm-pack build --target web . -- -Z build-std="panic_abort,std"
+AR=/opt/llvm/bin/llvm-ar  CC=/opt/llvm/bin/clang wasm-pack build --target web . -- -Z build-std="panic_abort,std"
 ```
 
 Make sure that you supply the correct paths for llvm-ar and clang (AR and CC). You can use `brew info llvm` on Mac or `dpkg -L llvm` for Linux. 
@@ -137,7 +137,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
                             // clicking it to download the file and then removing the element
                             const a = document.createElement("a");
                             a.href = url;
-                            a.download = 'result.bin';
+                            a.download = 'proof.bin';
                             a.style.display = 'none';
                             document.body.appendChild(a);
                             a.click();
@@ -180,10 +180,15 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
         <div>
             <h1>Prove</h1>
             <!--File inputs to upload the necessary files-->
+            <label for="data">Input Data:</label>
             <input id="data" type="file" placeholder="data" />
+            <label for="pk">Proving key:</label>
             <input id="pk" type="file" placeholder="pk" />
+            <label for="circuit_ser">Circuit (.onnx):</label>
             <input id="circuit_ser" type="file" placeholder="circuit_ser" />
+            <label for="circuit_params_ser">Circuit params:</label>
             <input id="circuit_params_ser" type="file" placeholder="circuit_params_ser" />
+            <label for="params_ser">KZG params:</label>
             <input id="params_ser" type="file" placeholder="params_ser" />
             <!--Button to start the proving process-->
             <button id="proveButton">Prove</button>
@@ -194,9 +199,13 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
         <div>
             <h1>Verify</h1>
             <!--File inputs to upload the necessary files-->
+            <label for="proof_js">Proof (proof.bin):</label>
             <input id="proof_js" type="file" placeholder="proof_js" />
+            <label for="vk">Verifier key:</label>
             <input id="vk" type="file" placeholder="vk" />
+            <label for="circuit_params_ser_verify">Circuit params:</label>
             <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser" />
+            <label for="params_ser_verify">KZG params:</label>
             <input id="params_ser_verify" type="file" placeholder="params_ser" />
             <!--Button to start the verification process-->
             <button id="verifyButton">Verify</button>
@@ -206,10 +215,11 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
         </div>
     </body>
 </html>
+
 ```
 4) This script generates a simple HTML frontend with fields to pass in files for our input fields (we'll upload them from our ezkl directory). It also calls the `ezkl_lib.js` folder in our pkg to fetch the exported `prove_wasm`, `verify_wasm`, and `init_panic_hook` functions.
 
-5) Run a simple https server such as python3's:
+5) Run a simple http server such as python3's:
 
    ```
    python3 -m http.server
