@@ -7,7 +7,7 @@
 <body>
     <script type="module">
         // Importing the necessary functions from the WASM module
-        import init, { prove_wasm, verify_wasm } from './pkg/ezkl_lib.js';
+        import init, { prove_wasm, verify_wasm, gen_circuit_params_wasm, gen_pk_wasm, gen_vk_wasm } from './pkg/ezkl_lib.js';
 
         async function run() {
             try {
@@ -32,16 +32,103 @@
                         reader.readAsArrayBuffer(file);
                     });
                 }
+                // Adding event listeners for gen_circuit_params_wasm, gen_pk_wasm, gen_vk_wasm
+                document.getElementById("genCircuitParamsButton").addEventListener("click", async () => {
+                    try {
+                        const data_ser = await readUploadedFileAsText(document.getElementById("data_param"));
+                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_gen"));
+                        const run_args_ser = await readUploadedFileAsText(document.getElementById("run_args_ser_gen"));
+                        const result = await gen_circuit_params_wasm(data_ser, circuit_ser, run_args_ser);
+                        document.getElementById("genCircuitParamsResult").innerText = result ? 'Generation successful' : 'Generation failed';
+
+                        // Creating a blob and a URL for it from the result
+                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+
+                        // Creating a hidden anchor element, adding it to the document,
+                        // clicking it to download the file and then removing the element
+                        const g = document.createElement("g");
+                        g.href = url;
+                        g.download = 'circuit.params';
+                        g.style.display = 'none';
+                        document.body.appendChild(g);
+                        g.click();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            document.body.removeChild(g);
+                        }, 0);
+                    } catch (error) {
+                        console.error("An error occurred generating circuit parameters:", error);
+                    }
+                });
+
+                document.getElementById("genPkButton").addEventListener("click", async () => {
+                    try {
+                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_pk"));
+                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_pk"));
+                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_pk"));
+                        const data_ser = await readUploadedFileAsText(document.getElementById("data_ser_pk"));
+                        const result = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser, data_ser);
+                        document.getElementById("genPkResult").innerText = result ? 'Generation successful' : 'Generation failed';
+
+                        // Creating a blob and a URL for it from the result
+                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+
+                        // Creating a hidden anchor element, adding it to the document,
+                        // clicking it to download the file and then removing the element
+                        const pk = document.createElement("g");
+                        pk.href = url;
+                        pk.download = 'pk.key';
+                        pk.style.display = 'none';
+                        document.body.appendChild(pk);
+                        pk.click();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            document.body.removeChild(pk);
+                        }, 0);
+                    } catch (error) {
+                        console.error("An error occurred generating proving key:", error);
+                    }
+                });
+
+                document.getElementById("genVkButton").addEventListener("click", async () => {
+                    try {
+                        const pk_ser = await readUploadedFileAsText(document.getElementById("pk_ser"));
+                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_vk"));
+                        const result = await gen_vk_wasm(pk_ser, circuit_params_ser);
+                        document.getElementById("genVkResult").innerText = result ? 'Generation successful' : 'Generation failed';
+
+                        // Creating a blob and a URL for it from the result
+                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+
+                        // Creating a hidden anchor element, adding it to the document,
+                        // clicking it to download the file and then removing the element
+                        const vk = document.createElement("g");
+                        vk.href = url;
+                        vk.download = 'vk.key';
+                        vk.style.display = 'none';
+                        document.body.appendChild(vk);
+                        vk.click();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            document.body.removeChild(vk);
+                        }, 0);
+                    } catch (error) {
+                        console.error("An error occurred generating verifying key:", error);
+                    }
+                });
 
                 // Adding an event listener to the proveButton
                 document.getElementById("proveButton").addEventListener("click", async () => {
                     try {
                         // Reading the content of the input files
-                        const data = await readUploadedFileAsText(document.getElementById("data"));
-                        const pk = await readUploadedFileAsText(document.getElementById("pk"));
-                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser"));
-                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser"));
-                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser"));
+                        const data = await readUploadedFileAsText(document.getElementById("data_prove"));
+                        const pk = await readUploadedFileAsText(document.getElementById("pk_prove"));
+                        const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_prove"));
+                        const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_prove"));
+                        const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_prove"));
 
                         // Using the WASM function to get a result
                         const result = await prove_wasm(data, pk, circuit_ser, circuit_params_ser, params_ser);
@@ -97,18 +184,51 @@
     </script>
     <!--HTML forms for the proving and verifying functionality-->
     <div>
+        <h1>Generate Circuit Params</h1>
+        <label for="data_param">Input Data:</label>
+        <input id="data_param" type="file" placeholder="data_param" />
+        <label for="circuit_ser_gen">Circuit (.onnx):</label>
+        <input id="circuit_ser_gen" type="file" placeholder="circuit_ser" />
+        <label for="run_args_ser_gen">Run Args:</label>
+        <input id="run_args_ser_gen" type="file" placeholder="run_args_ser_gen" />
+        <button id="genCircuitParamsButton">Generate Circuit Params</button>
+        <h2>Result:</h2>
+        <div id="genCircuitParamsResult"></div>
+
+        <h1>Generate Proving Key</h1>
+        <label for="circuit_ser_pk">Circuit (.onnx):</label>
+        <input id="circuit_ser_pk" type="file" placeholder="circuit_ser_pk" />
+        <label for="params_pk">KZG Params:</label>
+        <input id="params_pk" type="file" placeholder="params_pk" />
+        <label for="circuit_params_ser_pk">Circuit params:</label>
+        <input id="circuit_params_ser_pk" type="file" placeholder="circuit_params_ser_pk" />
+        <label for="data_ser_pk">Input Data:</label>
+        <input id="data_ser_pk" type="file" placeholder="data_ser_pk" />
+        <button id="genPkButton">Generate</button>
+        <h2>Result:</h2>
+        <div id="genPkResult"></div>
+
+        <h1>Generate Verifying Key</h1>
+        <label for="pk_ser">Proving Key:</label>
+        <input id="pk_ser" type="file" placeholder="pk_ser" />
+        <label for="circuit_params_ser_vk">Circuit params:</label>
+        <input id="circuit_params_ser_vk" type="file" placeholder="circuit_params_ser_vk" />
+        <button id="genVkButton">Generate Verifying Key</button>
+        <h2>Result:</h2>
+        <div id="genVkResult"></div>
+
         <h1>Prove</h1>
         <!--File inputs to upload the necessary files-->
-        <label for="data">Input Data:</label>
-        <input id="data" type="file" placeholder="data" />
-        <label for="pk">Proving key:</label>
-        <input id="pk" type="file" placeholder="pk" />
-        <label for="circuit_ser">Circuit (.onnx):</label>
-        <input id="circuit_ser" type="file" placeholder="circuit_ser" />
-        <label for="circuit_params_ser">Circuit params:</label>
-        <input id="circuit_params_ser" type="file" placeholder="circuit_params_ser" />
-        <label for="params_ser">KZG params:</label>
-        <input id="params_ser" type="file" placeholder="params_ser" />
+        <label for="data_prove">Input Data:</label>
+        <input id="data_prove" type="file" placeholder="data_prove" />
+        <label for="pk_prove">Proving key:</label>
+        <input id="pk_prove" type="file" placeholder="pk_prove" />
+        <label for="circuit_ser_prove">Circuit (.onnx):</label>
+        <input id="circuit_ser_prove" type="file" placeholder="circuit_ser" />
+        <label for="circuit_params_ser_prove">Circuit params:</label>
+        <input id="circuit_params_ser_prove" type="file" placeholder="circuit_params_ser_prove" />
+        <label for="params_ser_prove">KZG params:</label>
+        <input id="params_ser_prove" type="file" placeholder="params_ser_prove" />
         <!--Button to start the proving process-->
         <button id="proveButton">Prove</button>
         <h2>Result:</h2>
@@ -120,12 +240,12 @@
         <!--File inputs to upload the necessary files-->
         <label for="proof_js">Proof (proof.bin):</label>
         <input id="proof_js" type="file" placeholder="proof_js" />
-        <label for="vk">Verifier key:</label>
+        <label for="vk">Verifying key:</label>
         <input id="vk" type="file" placeholder="vk" />
         <label for="circuit_params_ser_verify">Circuit params:</label>
-        <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser" />
+        <input id="circuit_params_ser_verify" type="file" placeholder="circuit_params_ser_verify" />
         <label for="params_ser_verify">KZG params:</label>
-        <input id="params_ser_verify" type="file" placeholder="params_ser" />
+        <input id="params_ser_verify" type="file" placeholder="params_ser_verify" />
         <!--Button to start the verification process-->
         <button id="verifyButton">Verify</button>
         <h2>Result:</h2>

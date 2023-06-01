@@ -64,6 +64,8 @@ This command will generate a directory called `pkg` in our root ezkl directory. 
 * package.json
 * README.md
 
+Remove the .gitignore file if you want to add `pkg` to your root git directory.
+
 If something goes wrong, be certain that the paths to your llvm-ar and clang libraries are correct. Also make sure wasm-pack is installed and that your .cargo/config file in ezkl looks like this:
 
 ```txt
