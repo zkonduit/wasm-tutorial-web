@@ -38,16 +38,16 @@
                         const data_ser = await readUploadedFileAsText(document.getElementById("data_param"));
                         const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_gen"));
                         const run_args_ser = await readUploadedFileAsText(document.getElementById("run_args_ser_gen"));
-                        const result = await gen_circuit_params_wasm(data_ser, circuit_ser, run_args_ser);
-                        document.getElementById("genCircuitParamsResult").innerText = result ? 'Generation successful' : 'Generation failed';
+                        const result_cp = await gen_circuit_params_wasm(data_ser, circuit_ser, run_args_ser);
+                        document.getElementById("genCircuitParamsResult").innerText = result_cp ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
-                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const blob = new Blob([result_cp.buffer], { type: 'application/octet-stream' });
                         const url = URL.createObjectURL(blob);
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const g = document.createElement("g");
+                        const g = document.createElement("a");
                         g.href = url;
                         g.download = 'circuit.params';
                         g.style.display = 'none';
@@ -68,16 +68,17 @@
                         const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_pk"));
                         const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_pk"));
                         const data_ser = await readUploadedFileAsText(document.getElementById("data_ser_pk"));
-                        const result = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser, data_ser);
-                        document.getElementById("genPkResult").innerText = result ? 'Generation successful' : 'Generation failed';
+                        const result_pk = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser, data_ser);
+                        console.log("result finished loading:", result_pk);
+                        document.getElementById("genPkResult").innerText = result_pk ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
-                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const blob = new Blob([result_pk.buffer], { type: 'application/octet-stream' });
                         const url = URL.createObjectURL(blob);
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const pk = document.createElement("g");
+                        const pk = document.createElement("a");
                         pk.href = url;
                         pk.download = 'pk.key';
                         pk.style.display = 'none';
@@ -96,16 +97,16 @@
                     try {
                         const pk_ser = await readUploadedFileAsText(document.getElementById("pk_ser"));
                         const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_vk"));
-                        const result = await gen_vk_wasm(pk_ser, circuit_params_ser);
-                        document.getElementById("genVkResult").innerText = result ? 'Generation successful' : 'Generation failed';
+                        const result_vk = await gen_vk_wasm(pk_ser, circuit_params_ser);
+                        document.getElementById("genVkResult").innerText = result_vk ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
-                        const blob = new Blob([result.buffer], { type: 'application/octet-stream' });
+                        const blob = new Blob([result_vk.buffer], { type: 'application/octet-stream' });
                         const url = URL.createObjectURL(blob);
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const vk = document.createElement("g");
+                        const vk = document.createElement("a");
                         vk.href = url;
                         vk.download = 'vk.key';
                         vk.style.display = 'none';
@@ -188,7 +189,7 @@
         <label for="data_param">Input Data:</label>
         <input id="data_param" type="file" placeholder="data_param" />
         <label for="circuit_ser_gen">Circuit (.onnx):</label>
-        <input id="circuit_ser_gen" type="file" placeholder="circuit_ser" />
+        <input id="circuit_ser_gen" type="file" placeholder="circuit_ser_gen" />
         <label for="run_args_ser_gen">Run Args:</label>
         <input id="run_args_ser_gen" type="file" placeholder="run_args_ser_gen" />
         <button id="genCircuitParamsButton">Generate Circuit Params</button>
@@ -198,8 +199,8 @@
         <h1>Generate Proving Key</h1>
         <label for="circuit_ser_pk">Circuit (.onnx):</label>
         <input id="circuit_ser_pk" type="file" placeholder="circuit_ser_pk" />
-        <label for="params_pk">KZG Params:</label>
-        <input id="params_pk" type="file" placeholder="params_pk" />
+        <label for="params_ser_pk">KZG Params:</label>
+        <input id="params_ser_pk" type="file" placeholder="params_ser_pk" />
         <label for="circuit_params_ser_pk">Circuit params:</label>
         <input id="circuit_params_ser_pk" type="file" placeholder="circuit_params_ser_pk" />
         <label for="data_ser_pk">Input Data:</label>
