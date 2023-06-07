@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
-export function gen_circuit_params_wasm(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
-export function gen_pk_wasm(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number): void;
+export function gen_circuit_params_wasm(a: number, b: number, c: number, d: number, e: number): void;
+export function gen_pk_wasm(a: number, b: number, c: number, d: number, e: number, f: number, g: number): void;
 export function gen_vk_wasm(a: number, b: number, c: number, d: number, e: number): void;
 export function verify_wasm(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number): number;
 export function prove_wasm(a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number): void;
