@@ -37,9 +37,7 @@
                     try {
                         const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_gen"));
                         const run_args_ser = await readUploadedFileAsText(document.getElementById("run_args_ser_gen"));
-                        console.log("circuit_ser:", circuit_ser, "run_args_ser:", run_args_ser);
                         const result_cp = await gen_circuit_params_wasm(circuit_ser, run_args_ser);
-                        console.log(result_cp);
 
                         document.getElementById("genCircuitParamsResult").innerText = result_cp ? 'Generation successful' : 'Generation failed';
 
@@ -72,7 +70,6 @@
                         const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_pk"));
                         const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_pk"));
                         const result_pk = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser);
-                        console.log("result finished loading:", result_pk);
                         document.getElementById("genPkResult").innerText = result_pk ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
@@ -239,7 +236,7 @@
     <div>
         <h1>Verify</h1>
         <!--File inputs to upload the necessary files-->
-        <label for="proof_js">Proof (proof.bin):</label>
+        <label for="proof_js">Proof (network.proof):</label>
         <input id="proof_js" type="file" placeholder="proof_js" />
         <label for="vk">Verifying key:</label>
         <input id="vk" type="file" placeholder="vk" />

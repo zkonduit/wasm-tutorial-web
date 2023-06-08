@@ -76,13 +76,61 @@ rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
 
 ### Creating a frontend
 
-Now that we have the wasm-pack package, we can build a simple frontend that uses its exports to prove and verify models (we would love to see projects using this in more intricate ways).
+Now that we have the wasm-pack package, we can build a simple frontend that uses its exports to prove and verify models (we would love to see projects using this in more intricate ways). Here's what we'll do step-by-step:
 
-We'll be using the ezkl library to pass in **input data**, **the proving key**, **the serialized circuit**, **the serialized circuit parameters**, and our **polynomial commitment scheme paramenters** to our `prove_wasm` function. Additionally, we will pass the **proof**, **the verify key**, **the serialized circuit parameters**, and the **polynomial commitment scheme parameters** to our `verify_wasm` function. It is important to note that you will have a lot of this information after you create a circuit with ezkl. Feel free to store them in your project (perhaps .gitignore-ing them). Let's begin.
+We'll be using the `ezkl` library to pass in the **serialized circuit**(.onnx) and **runargs** to our `gen_circuit_params_wasm` function. In order to generate a serialized `runargs` file, you'll need to generate it. You can do this by adding a new Rust file to `ezkl/src/bin` (feel free to call it `genscript.rs`). Paste this code there:
+```rust
+mod genscript {
+    use ezkl_lib::commands::RunArgs;
+    use std::fs::File;
+    use std::io::Write;
+    use ezkl_lib::circuit::Tolerance;
+ 
+    pub fn gen_run_args() {
+        let run_args = RunArgs {
+            tolerance: Tolerance::default(),
+            scale: 7,
+            bits: 16,
+            logrows: 17,
+            batch_size: 1,
+            public_inputs: false,
+            public_outputs: true,
+            public_params: false,
+            pack_base: 1,
+            allocated_constraints: Some(1000), // assuming an arbitrary value here for the sake of the example
+        };
+ 
+ 
+        let serialized_run_args =
+            bincode::serialize(&run_args).expect("Failed to serialize RunArgs");
+ 
+ 
+        // Write the serialized runargs to a file.
+        let mut rafile = File::create("run_args.params").expect("Failed to create file");
+        rafile
+            .write_all(&serialized_run_args)
+            .expect("Failed to write data to file");
+    }
+ }
+ 
+ 
+ fn main() {
+    genscript::gen_run_args();
+ }
+ 
+ 
+```
+From here, feel free to change the RunArgs as you please to make the best SNARK for your circuit. These are the arguments you see [here](https://docs.ezkl.xyz/command_line_interface/). After you run the main function with `cargo run --bin genscript`, you will have a file called `run_args.params`. You can use this as the second parameter for `gen_circuit_params_wasm`.
+
+We will use the `circuit` file generated in this step to pass to our `gen_pk_wasm` function along with our **commitment scheme parameters** (kzg.params) and **serialized circuit**.
+
+After this gives us our `pk.key` file, we will use that along with the **input data**(.json), **the serialized circuit**, **the serialized circuit parameters**, and our **commitment scheme paramenters** to trigger our `prove_wasm` function. 
+
+When the `network.proof` file is created here, we will pass that along with the **verify key** and **serialized circuit parameters** to our `verify_wasm` function. It is important to note that you will have a lot of this information after you create a circuit with `ezkl`. Feel free to store them in your project (perhaps .gitignore-ing them). Now that we know what will happen, let's begin with the frontend. 
 
 1) Make a new directory for your project.
 2) copy your new `pkg` directory into the project
-3) create an index.html and paste this starter code in:
+3) create an index.html and paste this code in:
 
 ```bash
 <html>
@@ -122,10 +170,10 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
                 // Adding event listeners for gen_circuit_params_wasm, gen_pk_wasm, gen_vk_wasm
                 document.getElementById("genCircuitParamsButton").addEventListener("click", async () => {
                     try {
-                        const data_ser = await readUploadedFileAsText(document.getElementById("data_param"));
                         const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_gen"));
                         const run_args_ser = await readUploadedFileAsText(document.getElementById("run_args_ser_gen"));
-                        const result_cp = await gen_circuit_params_wasm(data_ser, circuit_ser, run_args_ser);
+                        const result_cp = await gen_circuit_params_wasm(circuit_ser, run_args_ser);
+
                         document.getElementById("genCircuitParamsResult").innerText = result_cp ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
@@ -134,9 +182,9 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const g = document.createElement("g");
+                        const g = document.createElement("a");
                         g.href = url;
-                        g.download = 'circuit.params';
+                        g.download = 'circuit';
                         g.style.display = 'none';
                         document.body.appendChild(g);
                         g.click();
@@ -144,6 +192,8 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
                             URL.revokeObjectURL(url);
                             document.body.removeChild(g);
                         }, 0);
+
+                        
                     } catch (error) {
                         console.error("An error occurred generating circuit parameters:", error);
                     }
@@ -154,9 +204,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
                         const circuit_ser = await readUploadedFileAsText(document.getElementById("circuit_ser_pk"));
                         const params_ser = await readUploadedFileAsText(document.getElementById("params_ser_pk"));
                         const circuit_params_ser = await readUploadedFileAsText(document.getElementById("circuit_params_ser_pk"));
-                        const data_ser = await readUploadedFileAsText(document.getElementById("data_ser_pk"));
-                        const result_pk = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser, data_ser);
-                        console.log("result finished loading:", result_pk);
+                        const result_pk = await gen_pk_wasm(circuit_ser, params_ser, circuit_params_ser);
                         document.getElementById("genPkResult").innerText = result_pk ? 'Generation successful' : 'Generation failed';
 
                         // Creating a blob and a URL for it from the result
@@ -165,7 +213,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const pk = document.createElement("pk");
+                        const pk = document.createElement("a");
                         pk.href = url;
                         pk.download = 'pk.key';
                         pk.style.display = 'none';
@@ -193,7 +241,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
 
                         // Creating a hidden anchor element, adding it to the document,
                         // clicking it to download the file and then removing the element
-                        const vk = document.createElement("vk");
+                        const vk = document.createElement("a");
                         vk.href = url;
                         vk.download = 'vk.key';
                         vk.style.display = 'none';
@@ -273,8 +321,6 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
     <!--HTML forms for the proving and verifying functionality-->
     <div>
         <h1>Generate Circuit Params</h1>
-        <label for="data_param">Input Data:</label>
-        <input id="data_param" type="file" placeholder="data_param" />
         <label for="circuit_ser_gen">Circuit (.onnx):</label>
         <input id="circuit_ser_gen" type="file" placeholder="circuit_ser_gen" />
         <label for="run_args_ser_gen">Run Args:</label>
@@ -283,6 +329,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
         <h2>Result:</h2>
         <div id="genCircuitParamsResult"></div>
 
+
         <h1>Generate Proving Key</h1>
         <label for="circuit_ser_pk">Circuit (.onnx):</label>
         <input id="circuit_ser_pk" type="file" placeholder="circuit_ser_pk" />
@@ -290,8 +337,6 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
         <input id="params_ser_pk" type="file" placeholder="params_ser_pk" />
         <label for="circuit_params_ser_pk">Circuit params:</label>
         <input id="circuit_params_ser_pk" type="file" placeholder="circuit_params_ser_pk" />
-        <label for="data_ser_pk">Input Data:</label>
-        <input id="data_ser_pk" type="file" placeholder="data_ser_pk" />
         <button id="genPkButton">Generate</button>
         <h2>Result:</h2>
         <div id="genPkResult"></div>
@@ -326,7 +371,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
     <div>
         <h1>Verify</h1>
         <!--File inputs to upload the necessary files-->
-        <label for="proof_js">Proof (proof.bin):</label>
+        <label for="proof_js">Proof (network.proof):</label>
         <input id="proof_js" type="file" placeholder="proof_js" />
         <label for="vk">Verifying key:</label>
         <input id="vk" type="file" placeholder="vk" />
@@ -345,7 +390,7 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
 </html>
 
 ```
-4) This script generates a simple HTML frontend with fields to pass in files for our input fields (we'll upload them from our ezkl directory). It also calls the `ezkl_lib.js` folder in our pkg to fetch the exported `prove_wasm`, `verify_wasm`, and `init_panic_hook` functions.
+4) This script generates a simple HTML frontend with fields to pass in files for our input fields (we'll upload them from our ezkl directory). It also calls the `ezkl_lib.js` folder in our pkg to fetch the exported `prove_wasm`, `verify_wasm`, `gen_circuit_params_wasm`, `gen_pk_wasm`, and `gen_vk_wasm` functions.
 
 5) Run a simple http server such as python3's:
 
@@ -353,19 +398,35 @@ We'll be using the ezkl library to pass in **input data**, **the proving key**, 
    python3 -m http.server
    ```
 
-6) Finally, run the `setup` step in ezkl (WASM support for this coming soon) and upload the files to your `Prove` function. The ordering for `Prove` (from left to right) is:
+6) Finally, upload the corresponding files to each parameter. 
 
+The ordering for `Generate Circuit Params` is:
+   * `circuit_ser`: circuit (network.onnx)
+   * `RunArgs`: RunArgs generated earlier in the tutorial
+
+The ordering for `Generate Proving Key` is:
+   * `circuit_ser`: circuit (network.onnx)
+   * `params_ser`: commitment scheme parameters (kzg.params)
+   * `circuit_params_ser`: circuit parameters (circuit file generated from the last step)
+
+The ordering for `Generate Verifying Key` is:
+   * `pk`: proving key (pk.key)
+   * `circuit_params_ser`: circuit parameters (circuit)
+
+The ordering for `Prove` (from left to right) is:
    * `data`: input data (input.json)
    * `pk`: proving key (pk.key)
    * `circuit_ser`: circuit (network.onnx)
-   * `circuit_params_ser`: circuit parameters (circuit.params)
+   * `circuit_params_ser`: circuit parameters (circuit)
    * `params_ser`: commitment scheme parameters (kzg.params)
 
-   This will prompt you to download a file called `result`. `result` is a binary file of the generated proof. Note that this step may take time. After `result` has been downloaded, upload the file to the first value of the `Verify` function. The ordering for `Verify` (from left to right) is:
+This will prompt you to download a file called `network.proof`. `network.proof` is a binary file of the generated proof. Note that this step may take time. After `network.proof` has been downloaded, upload the file to the first value of the `Verify` function. 
 
-   * `proof_js`: proof (proof.pf)
+The ordering for `Verify` (from left to right) is:
+
+   * `proof_js`: proof (network.proof)
    * `vk`: verifier key (vk.key)
-   * `circuit_params_ser`: circuit parameters (circuit.params)
+   * `circuit_params_ser`: circuit parameters (circuit)
    * `params_ser`: commitment scheme parameters (kzg.params)
 
    `True` or `False` should appear as the result for the Verify function.
