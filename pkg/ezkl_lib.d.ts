@@ -6,21 +6,19 @@
 export function init_panic_hook(): void;
 /**
 * Generate circuit params in browser
-* @param {Uint8ClampedArray} data_ser
 * @param {Uint8ClampedArray} circuit_ser
 * @param {Uint8ClampedArray} run_args_ser
 * @returns {Uint8Array}
 */
-export function gen_circuit_params_wasm(data_ser: Uint8ClampedArray, circuit_ser: Uint8ClampedArray, run_args_ser: Uint8ClampedArray): Uint8Array;
+export function gen_circuit_params_wasm(circuit_ser: Uint8ClampedArray, run_args_ser: Uint8ClampedArray): Uint8Array;
 /**
 * Generate proving key in browser
 * @param {Uint8ClampedArray} circuit_ser
 * @param {Uint8ClampedArray} params_ser
 * @param {Uint8ClampedArray} circuit_params_ser
-* @param {Uint8ClampedArray} data_ser
 * @returns {Uint8Array}
 */
-export function gen_pk_wasm(circuit_ser: Uint8ClampedArray, params_ser: Uint8ClampedArray, circuit_params_ser: Uint8ClampedArray, data_ser: Uint8ClampedArray): Uint8Array;
+export function gen_pk_wasm(circuit_ser: Uint8ClampedArray, params_ser: Uint8ClampedArray, circuit_params_ser: Uint8ClampedArray): Uint8Array;
 /**
 * Generate verifying key in browser
 * @param {Uint8ClampedArray} pk
@@ -76,8 +74,8 @@ export class wbg_rayon_PoolBuilder {
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
-  readonly gen_circuit_params_wasm: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
-  readonly gen_pk_wasm: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+  readonly gen_circuit_params_wasm: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly gen_pk_wasm: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => void;
   readonly gen_vk_wasm: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly verify_wasm: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => number;
   readonly prove_wasm: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => void;
