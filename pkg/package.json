@@ -1,13 +1,13 @@
 {
-  "name": "ezkl-lib",
-  "version": "0.1.0",
+  "name": "ezkl",
+  "version": "0.0.0",
   "files": [
-    "ezkl_lib_bg.wasm",
-    "ezkl_lib.js",
-    "ezkl_lib.d.ts"
+    "ezkl_bg.wasm",
+    "ezkl.js",
+    "ezkl.d.ts"
   ],
-  "module": "ezkl_lib.js",
-  "types": "ezkl_lib.d.ts",
+  "module": "ezkl.js",
+  "types": "ezkl.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]
