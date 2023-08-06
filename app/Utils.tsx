@@ -1,7 +1,17 @@
 import { useEffect, useRef } from 'react'
-import { genPk, genVk, prove, poseidonHash, verify } from '../pkg/ezkl.js'
+import { 
+  elgamalGenRandom,
+  elgamalEncrypt,
+  elgamalDecrypt,
+  prove, 
+  poseidonHash, 
+  verify 
+} from '../pkg/ezkl.js'
+import JSZip from 'jszip'
+import { saveAs } from 'file-saver'
+import JSONBig from 'json-bigint'
 
-export function readUploadedFileAsText(file: File) {
+export function readUploadedFileAsBuffer(file: File) {
   return new Promise<Uint8ClampedArray>((resolve, reject) => {
     const reader = new FileReader()
 
@@ -16,7 +26,6 @@ export function readUploadedFileAsText(file: File) {
     reader.onerror = (error) => {
       reject(new Error('File could not be read: ' + error))
     }
-
     reader.readAsArrayBuffer(file)
   })
 }
@@ -72,6 +81,50 @@ export function FileDownload({
   return <a ref={linkRef} style={{ display: 'none' }} />
 }
 
+export function ElgamalZipFileDownload({
+  fileName,
+  buffer,
+  handleDownloadCompleted,
+}: FileDownloadProps) {
+  const linkRef = useRef<HTMLAnchorElement | null>(null)
+
+  useEffect(() => {
+    if (!buffer) {
+      return
+    }
+
+    const blob = new Blob([buffer], { type: 'application/octet-stream' })
+    const reader = new FileReader()
+
+    reader.onloadend = async () => {
+      const base64data = reader.result
+
+      if (typeof base64data === 'string') {
+        const elgamalVar = JSONBig.parse(atob(base64data.split(',')[1]))
+
+        // Create a new Zip file
+        var zip = new JSZip()
+        zip.file('pk.txt', JSONBig.stringify(elgamalVar.pk))
+        zip.file('r.txt', JSONBig.stringify(elgamalVar.r))
+        zip.file('sk.txt', JSONBig.stringify(elgamalVar.sk))
+
+        // Generate the zip file asynchronously
+        const content = await zip.generateAsync({type:"blob"})
+        
+        saveAs(content, fileName)
+
+        // Notify the parent component that the download operation is complete
+        handleDownloadCompleted()
+      }
+    }
+
+    // Convert the Blob to a Data URL
+    reader.readAsDataURL(blob)
+  }, [buffer, fileName, handleDownloadCompleted])
+
+  return <a ref={linkRef} style={{ display: 'none' }} />
+}
+
 type FileMapping = {
   [key: string]: File
 }
@@ -84,7 +137,7 @@ async function convertFilesToFilesSer<T extends FileMapping>(
   files: T,
 ): Promise<FileSerMapping> {
   const fileReadPromises = Object.entries(files).map(async ([key, file]) => {
-    const fileContent = await readUploadedFileAsText(file)
+    const fileContent = await readUploadedFileAsBuffer(file)
     return { key, fileContent }
   })
 
@@ -98,12 +151,6 @@ async function convertFilesToFilesSer<T extends FileMapping>(
   return filesSer
 }
 
-export async function handleGenPkButton<T extends FileMapping>(
-  files: T,
-): Promise<Uint8Array> {
-  const result = await convertFilesToFilesSer(files)
-  return genPk(result['model'], result['srs'], result['circuitSettings'])
-}
 
 export async function handleGenProofButton<T extends FileMapping>(
   files: T,
@@ -118,15 +165,36 @@ export async function handleGenProofButton<T extends FileMapping>(
   )
 }
 
-export async function handleGenVkButton<T extends FileMapping>(
+export function handleGenREVButton(): Uint8Array {
+  const seed = generate256BitSeed()
+  return elgamalGenRandom(seed)
+}
+
+export async function handleGenElgamalEncryptionButton<T extends FileMapping>(
   files: T,
 ): Promise<Uint8Array> {
   const result = await convertFilesToFilesSer(files)
-  return genVk(result['pk'], result['circuitSettings'])
+
+  return elgamalEncrypt(
+    result['pk'],
+    result['message'],
+    result['r']
+  )
 }
 
+export async function handleGenElgamalDecryptionButton<T extends FileMapping>(
+  files: T,
+): Promise<Uint8Array> {
+  const result = await convertFilesToFilesSer(files)
+  return elgamalDecrypt(
+    result['cipher'],
+    result['sk']
+  )
+}
+
+
 export async function handleGenHashButton(message: File): Promise<Uint8Array> {
-  const message_hash = await readUploadedFileAsText(message)
+  const message_hash = await readUploadedFileAsBuffer(message)
   return poseidonHash(message_hash)
 }
 
@@ -140,4 +208,18 @@ export async function handleVerifyButton<T extends FileMapping>(
     result['circuitSettings'],
     result['srs'],
   )
+}
+
+function stringToUint8Array(str: string): Uint8Array {
+  const encoder = new TextEncoder(); 
+  const uint8Array = encoder.encode(str);
+  return uint8Array;
+}
+
+function generate256BitSeed(): Uint8ClampedArray {
+  const uuid = self.crypto.randomUUID();
+  const buffer = stringToUint8Array(uuid);
+  let seed = self.crypto.getRandomValues(buffer);
+  seed = seed.slice(0, 32);
+  return new Uint8ClampedArray(seed.buffer);
 }

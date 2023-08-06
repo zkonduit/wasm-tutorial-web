@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react'
 
 import init from '../pkg/ezkl'
 
-import GenPK from './GenPk'
-import GenVk from './GenVk'
-import GenProof from './GenProof'
-import Verify from './Verify'
-import Hash from './Hash'
+import ElgamalRandomVar from './components/ElgamalRandomVar'
+import ElgamalEncrypt from './components/ElgamalEncrypt'
+import ElgamalDecrypt from './components/ElgamalDecrypt'
+import GenProof from './components/GenProof'
+import Verify from './components/Verify'
+import Hash from './components/Hash'
 
 interface Files {
   [key: string]: File | null
@@ -32,22 +33,24 @@ export default function Home() {
 
   return (
     <div className='App'>
-      <GenPK
+      <ElgamalRandomVar/>  
+
+      <ElgamalEncrypt
         files={{
-          model: files['model_ser_pk'],
-          srs: files['srs_ser_pk'],
-          circuitSettings: files['circuit_settings_ser_pk'],
+          pk: files['elgamal_pk'],
+          message: files['elgamal_message'],
+          r: files['elgamal_r']
         }}
         handleFileChange={handleFileChange}
       />
 
-      <GenVk
+      <ElgamalDecrypt
         files={{
-          pk: files['pk_ser_vk'],
-          circuitSettings: files['circuit_settings_ser_vk'],
+          sk: files['elgamal_sk'],
+          cipher: files['elgamal_cipher']
         }}
         handleFileChange={handleFileChange}
-      />
+      />     
 
       <GenProof
         files={{
