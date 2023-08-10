@@ -18,6 +18,7 @@ EZKL
 1. Define a computational graph, for instance a neural network (but really any arbitrary set of operations), as you would normally in pytorch or tensorflow.
 2. Export the final graph of operations as an [.onnx](https://onnx.ai/) file and some sample inputs to a `.json` file.
 3. Point `ezkl` to the `.onnx` and `.json` files to generate a ZK-SNARK circuit with which you can prove statements such as:
+
 > "I ran this publicly available neural network on some private data and it produced this output"
 
 > "I ran my private neural network on some public data and it produced this output"
@@ -26,20 +27,37 @@ EZKL
 
 In the backend we use [Halo2](https://github.com/privacy-scaling-explorations/halo2) as a proof system.
 
+The generated proofs can then be used on-chain to verify computation, only the Ethereum Virtual Machine (EVM) is supported at the moment.
+
+
+- If you have any questions, we'd love for you to open up a discussion topic in [Discussions](https://github.com/zkonduit/ezkl/discussions). Alternatively, you can join the ✨[EZKL Community Telegram Group](https://t.me/+QRzaRvTPIthlYWMx)💫.
+
+
 ### resources 📖
 
 |  |  |
 | --- | --- |
 | [docs](https://docs.ezkl.xyz ) | the official ezkl docs page |
-| [tutorial](https://github.com/zkonduit/pyezkl/tree/main/examples/tutorial) | end-to-end tutorial using pytorch and ezkl |
-| [notebook](https://github.com/zkonduit/pyezkl/blob/main/examples/ezkl_demo.ipynb) | end-to-end tutorial using pytorch and ezkl in a jupyter notebook |
-| `cargo doc --open` | compile and open the docs in your default browser |
+| `cargo doc --open` | compile and open the docs in your default browser locally |
+| [![Simple Example](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/zkonduit/ezkl/blob/master/examples/notebooks/simple_demo.ipynb)| a simple demo of the python bindings in action on Colab |
+
+----------------------
+
+You can find a range of python based tutorials in the `examples/notebooks` section. These all assume you have the `ezkl` python library installed. If you want the bleeding edge version of the library, you can install it from the `main` branch with:
+
+```bash
+python -m venv .env
+source .env/bin/activate
+pip install -r requirements.txt
+maturin develop --release --features python-bindings
+# dependencies specific to tutorials
+pip install torch pandas numpy seaborn jupyter onnx kaggle py-solc-x web3 librosa tensorflow keras tf2onnx
+```
 
 
 ----------------------
 
 ## Getting Started ⚙️
-
 
 
 
@@ -50,7 +68,8 @@ https://user-images.githubusercontent.com/45801863/236771676-5bbbbfd1-ba6f-418a-
 Note that the library requires a nightly version of the rust toolchain. You can change the default toolchain by running:
 
 ```bash
-rustup override set nightly
+# we set it to this version because of https://github.com/rust-lang/rust/issues/110829
+rustup override set nightly-2023-04-17
 ```
 
 After which you may build the library
@@ -86,15 +105,8 @@ The EZKL project has several libraries and repos.
 
 | Repo | Description |
 | --- | --- |
-| [@zkonduit/ezkl](https://github.com/zkonduit/ezkl) | the main ezkl repo in rust |
-| [@zkonduit/pyezkl](https://github.com/zkonduit/pyezkl) | helper functions in python for processing onnx files |
-| [@zkonduit/ezkl-docs](https://github.com/zkonduit/ezkl-docs) | official ezkl docs |
-
-
-
-
-
-
+| [@zkonduit/ezkl](https://github.com/zkonduit/ezkl) | the main ezkl repo in rust with wasm and python bindings |
+| [@zkonduit/pyezkl](https://github.com/zkonduit/pyezkl) | additional functionality written in python to support data science and zero knowledge applications |
 
 ----------------------
 
@@ -107,11 +119,16 @@ If you're interested in contributing and are unsure where to start, reach out to
 
 More broadly:
 
-- Feel free to open up a discussion topic in [Discussions](https://github.com/zkonduit/ezkl/discussions) to ask questions. Alternatively, you may join the [EZKL Community Telegram Group](https://t.me/+76OjHb5CwJtkMTBh) to ask questions.
-
 - See currently open issues for ideas on how to contribute.
 
 - For PRs we use the [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) naming convention.
 
 - To report bugs or request new features [create a new issue within Issues](https://github.com/zkonduit/ezkl/issues) to inform the greater community.
+
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you shall be licensed to Zkonduit Inc. under the terms and conditions specified in the [CLA](https://github.com/zkonduit/ezkl/blob/main/cla.md), which you agree to by intentionally submitting a contribution. In particular, you have the right to submit the contribution and we can distribute it under the Apache 2.0 license, among other terms and conditions. 
+
+## No security guarantees
+
+Ezkl is unaudited, beta software undergoing rapid development. There may be bugs. No guarantees of security are made and it should not be relied on in production.
 
